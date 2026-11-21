@@ -2,14 +2,22 @@ name: Build Kestrel Android APK & AAB
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -21,50 +29,106 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android NDK 27 & CMake 3.30.5
+      # GitHub-hosted Ubuntu runners already include the Android SDK.
+      # Use the runner SDK directly instead of an extra SDK setup action.
+      - name: Configure Android SDK
+        shell: bash
         run: |
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.30.5"
+          set -euo pipefail
+          echo "ANDROID_HOME=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}" 
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "::error::Android SDK was not found on this runner."
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          if [ ! -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            echo "::error::sdkmanager is missing from $SDK_ROOT."
+            exit 1
+          fi
 
-      - name: Setup Gradle 8.11.1
+      - name: Accept Android SDK licenses and install required components
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.2.12479018" \
+            "cmake;3.30.5"
+
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
-      - name: Generate Release Keystore if missing
-        working-directory: android
+      - name: Prepare optional release signing key
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
         run: |
-          mkdir -p keystore
-          if [ ! -f keystore/kestrel-release.jks ]; then
-            keytool -genkeypair -noprompt \
-              -keystore keystore/kestrel-release.jks \
-              -alias kestrel \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass kestrel2026release \
-              -keypass kestrel2026release \
-              -dname "CN=Kestrel Terminal, OU=Mobile Engineering, O=Kestrel Dev, L=San Francisco, ST=CA, C=US"
+          set -euo pipefail
+          if [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::error::All four Android signing secrets must be configured."
+            exit 1
+          fi
+          KEYSTORE_PATH="$RUNNER_TEMP/kestrel-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+
+      - name: Run unit tests
+        working-directory: android
+        run: gradle testDebugUnitTest --no-daemon --stacktrace --console=plain
+
+      - name: Build APKs and AAB
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ env.ANDROID_KEYSTORE_PATH }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle assembleDebug assembleRelease bundleRelease --no-daemon --stacktrace --console=plain
+
+      - name: Verify APK metadata and release signature when signed
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_DIR="android/app/build/outputs/apk"
+          RELEASE_APK="$APK_DIR/release/app-release.apk"
+          UNSIGNED_APK="$APK_DIR/release/app-release-unsigned.apk"
+          DEBUG_APK="$APK_DIR/debug/app-debug.apk"
+
+          test -s "$DEBUG_APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$DEBUG_APK" | head -n 25
+
+          if [ -s "$RELEASE_APK" ]; then
+            "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$RELEASE_APK"
+            "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$RELEASE_APK" | head -n 25
+          elif [ -s "$UNSIGNED_APK" ]; then
+            echo "::notice::Release APK was built unsigned. Add the four ANDROID_KEYSTORE_* GitHub secrets to enable release signing."
+            "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$UNSIGNED_APK" | head -n 25
+          else
+            echo "::error::No release APK was produced."
+            exit 1
           fi
 
-      - name: Run Unit Tests
-        working-directory: android
-        run: gradle testDebugUnitTest --no-daemon --console=plain
+          test -s android/app/build/outputs/bundle/release/app-release.aab
 
-      - name: Build Debug & Release APKs and AAB
-        working-directory: android
-        run: gradle assembleDebug assembleRelease bundleRelease --no-daemon --console=plain
-
-      - name: Verify Release APK Signature
-        run: |
-          $ANDROID_HOME/build-tools/35.0.0/apksigner verify --verbose android/app/build/outputs/apk/release/app-release.apk
-          $ANDROID_HOME/build-tools/35.0.0/aapt2 dump badging android/app/build/outputs/apk/release/app-release.apk | head -n 25
-
-      - name: Upload Build Artifacts
+      - name: Upload APK and AAB artifacts
         uses: actions/upload-artifact@v4
         with:
           name: kestrel-android-artifacts
+          if-no-files-found: error
+          retention-days: 14
           path: |
-            android/app/build/outputs/apk/release/app-release.apk
-            android/app/build/outputs/apk/debug/app-debug.apk
-            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
