@@ -1,4 +1,4 @@
-name: Build Kestrel Android APK & AAB
+name: Build Kestrel Android APK
 
 on:
   push:
@@ -29,13 +29,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # GitHub-hosted Ubuntu runners already include the Android SDK.
-      # Use the runner SDK directly instead of an extra SDK setup action.
       - name: Configure Android SDK
         shell: bash
         run: |
           set -euo pipefail
-          echo "ANDROID_HOME=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}" 
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
           if [ -z "$SDK_ROOT" ]; then
             echo "::error::Android SDK was not found on this runner."
@@ -91,13 +88,13 @@ jobs:
         working-directory: android
         run: gradle testDebugUnitTest --no-daemon --stacktrace --console=plain
 
-      - name: Build APKs and AAB
+      - name: Build APKs
         working-directory: android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle assembleDebug assembleRelease bundleRelease --no-daemon --stacktrace --console=plain
+        run: gradle assembleDebug assembleRelease --no-daemon --stacktrace --console=plain
 
       - name: Verify APK metadata and release signature when signed
         shell: bash
@@ -122,15 +119,12 @@ jobs:
             exit 1
           fi
 
-          test -s android/app/build/outputs/bundle/release/app-release.aab
-
-      - name: Upload APK and AAB artifacts
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kestrel-android-artifacts
+          name: kestrel-android-apks
           if-no-files-found: error
           retention-days: 14
           path: |
             android/app/build/outputs/apk/debug/*.apk
             android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/bundle/release/*.aab
