@@ -104,6 +104,31 @@ app.get('/api/source-file', (req, res) => {
   res.json({path: relPath, content: fs.readFileSync(resolved, 'utf-8')});
 });
 
+app.get('/api/repo-doc', (req, res) => {
+  const allowed: Record<string, string> = {
+    'README.md': 'README.md',
+    'LICENSE': 'LICENSE',
+    'PRIVACY.md': 'PRIVACY.md',
+    'SECURITY.md': 'SECURITY.md',
+    'CONTRIBUTING.md': 'CONTRIBUTING.md',
+    'build-android.yml': '.github/workflows/build-android.yml',
+  };
+  const key = String(req.query.name || 'README.md');
+  const rel = allowed[key];
+  if (!rel) {
+    res.status(404).json({error: 'Document not found'});
+    return;
+  }
+  const full = path.resolve(__dirname, rel);
+  if (!fs.existsSync(full)) {
+    res.status(404).json({error: 'Document missing'});
+    return;
+  }
+  res.json({name: key, path: rel, content: fs.readFileSync(full, 'utf-8')});
+});
+
+app.use('/docs/images', express.static(path.resolve(__dirname, 'docs/images')));
+
 app.get('/downloads/:filename', (req, res) => {
   const safeName = path.basename(req.params.filename);
   const filePath = path.join(DOWNLOADS_DIR, safeName);

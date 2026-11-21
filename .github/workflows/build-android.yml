@@ -28,15 +28,10 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.30.5"
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - name: Setup Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
         with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/libs.versions.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          gradle-version: '8.11.1'
 
       - name: Generate Release Keystore if missing
         working-directory: android
@@ -54,11 +49,11 @@ jobs:
 
       - name: Run Unit Tests
         working-directory: android
-        run: ./gradlew testDebugUnitTest --no-daemon --console=plain
+        run: gradle testDebugUnitTest --no-daemon --console=plain
 
       - name: Build Debug & Release APKs and AAB
         working-directory: android
-        run: ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon --console=plain
+        run: gradle assembleDebug assembleRelease bundleRelease --no-daemon --console=plain
 
       - name: Verify Release APK Signature
         run: |

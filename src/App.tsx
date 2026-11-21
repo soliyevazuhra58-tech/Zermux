@@ -100,6 +100,16 @@ export default function App() {
 
   const primaryApk = artifacts.find((a) => a.id === 'release-apk');
 
+  const [activeDoc, setActiveDoc] = useState<string>('README.md');
+  const [docContent, setDocContent] = useState<string>('');
+
+  useEffect(() => {
+    fetch(`/api/repo-doc?name=${encodeURIComponent(activeDoc)}`)
+      .then((r) => r.json())
+      .then((d) => setDocContent(d.content || ''))
+      .catch(() => setDocContent('Unable to load document.'));
+  }, [activeDoc]);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#0D1117] dark:text-[#E6EDF3]">
       <header className="border-b border-slate-200 bg-white dark:border-[#242D3A] dark:bg-[#131820]">
@@ -111,6 +121,7 @@ export default function App() {
             <a href="#artifacts" className="hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap shrink-0">Builds</a>
             <a href="#architecture" className="hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap shrink-0">Architecture</a>
             <a href="#source" className="hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap shrink-0">Source Code</a>
+            <a href="#docs" className="hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap shrink-0">Docs &amp; Legal</a>
             <a href="#instructions" className="hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap shrink-0">Build Guide</a>
           </nav>
           <div className="flex items-center gap-3 shrink-0">
@@ -133,10 +144,10 @@ export default function App() {
               </a>
             ) : (
               <a
-                href="#artifacts"
+                href="#instructions"
                 className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-[#E5A00D] dark:text-[#0B0E13] whitespace-nowrap shrink-0"
               >
-                View Artifacts
+                GitHub Actions CI
               </a>
             )}
           </div>
@@ -145,16 +156,25 @@ export default function App() {
 
       <main className="mx-auto max-w-[1280px] px-6 py-10 space-y-12">
         <section id="artifacts" className="space-y-6">
-          <div className="max-w-2xl space-y-2">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              com.developer.terminal · Version 1.0.0 · Android 8.0+ (API 26–35) · ARM64
-            </p>
-            <h1 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-              Native Android Terminal, Code Editor &amp; ARM64 Workspace
-            </h1>
-            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              Compiled with Kotlin, Jetpack Compose, Material 3, Room SQLite, Jetpack Glance widgets, JGit, JSch, and an NDK C/C++ POSIX pseudoterminal (PTY) engine.
-            </p>
+          <div className="grid gap-6 lg:grid-cols-12 lg:items-center">
+            <div className="lg:col-span-7 space-y-2">
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                com.developer.terminal · Version 1.0.0 · Android 8.0+ (API 26–35) · ARM64
+              </p>
+              <h1 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
+                Native Android Terminal, Code Editor &amp; ARM64 Workspace
+              </h1>
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                Built with Kotlin, Jetpack Compose, Material 3, Room SQLite, Jetpack Glance widgets, JGit, JSch, and an NDK C/C++ POSIX pseudoterminal (PTY) engine.
+              </p>
+            </div>
+            <div className="lg:col-span-5 overflow-hidden rounded-xl border border-slate-200 dark:border-[#242D3A]">
+              <img
+                src="/docs/images/kestrel-banner.jpg"
+                alt="Kestrel Terminal Banner"
+                className="w-full h-auto object-cover"
+              />
+            </div>
           </div>
 
           {error && (
@@ -165,11 +185,11 @@ export default function App() {
 
           <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-[#242D3A] dark:bg-[#131820]">
             <div className="border-b border-slate-200 px-5 py-3.5 dark:border-[#242D3A]">
-              <h2 className="text-sm font-semibold">Compiled Android Deliverables</h2>
+              <h2 className="text-sm font-semibold">Android Build Deliverables</h2>
             </div>
 
             {loading ? (
-              <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading compiled build artifacts...</div>
+              <div className="p-6 text-sm text-slate-500 dark:text-slate-400">Loading build deliverables...</div>
             ) : (
               <div className="divide-y divide-slate-200 dark:divide-[#242D3A]">
                 {artifacts.map((art) => (
@@ -191,7 +211,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-4 shrink-0">
                       <span className="font-mono text-xs text-slate-600 dark:text-slate-300 tabular-nums">
-                        {art.available ? formatBytes(art.sizeBytes) : 'Pending'}
+                        {art.available ? formatBytes(art.sizeBytes) : 'Build via GitHub Actions'}
                       </span>
                       {art.available ? (
                         <a
@@ -203,7 +223,12 @@ export default function App() {
                           Download
                         </a>
                       ) : (
-                        <span className="text-xs text-slate-400">Not built</span>
+                        <a
+                          href="#instructions"
+                          className="text-xs font-medium text-[#E5A00D] hover:underline whitespace-nowrap"
+                        >
+                          CI Workflow Ready
+                        </a>
                       )}
                     </div>
                   </div>
@@ -221,7 +246,7 @@ export default function App() {
               <div className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <span className="text-slate-500 dark:text-slate-400">Unit Tests (JVM)</span>
-                  <p className="font-mono font-medium mt-0.5">{verification.unitTestsPassed ? 'Passed' : 'Not run'}</p>
+                  <p className="font-mono font-medium mt-0.5">{verification.unitTestsPassed ? 'Passed' : 'Run in CI / local'}</p>
                 </div>
                 <div>
                   <span className="text-slate-500 dark:text-slate-400">Target / Min SDK</span>
@@ -229,7 +254,7 @@ export default function App() {
                 </div>
                 <div>
                   <span className="text-slate-500 dark:text-slate-400">APK Signature</span>
-                  <p className="font-mono font-medium mt-0.5">{verification.apksignerOutput ? 'Verified (v1/v2/v3)' : 'Pending'}</p>
+                  <p className="font-mono font-medium mt-0.5">{verification.apksignerOutput ? 'Verified (v1/v2/v3)' : 'Configured in Gradle'}</p>
                 </div>
                 <div>
                   <span className="text-slate-500 dark:text-slate-400">On-Device Execution</span>
@@ -250,6 +275,13 @@ export default function App() {
 
         <section id="architecture" className="space-y-4">
           <h2 className="text-lg font-semibold">Implemented Native Subsystems</h2>
+          <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-[#242D3A]">
+            <img
+              src="/docs/images/kestrel-workspace.jpg"
+              alt="Kestrel Mobile and Tablet Workspace Preview"
+              className="w-full h-auto object-cover"
+            />
+          </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {[
               {title: 'JNI POSIX PTY Engine', detail: 'C++ openpty/fork/setsid/ioctl(TIOCSWINSZ) bridge with VT100/xterm-256color parser, alternate screen buffer, scrollback search, split panes, and NDK ARM64 libkestrel_utils.so.'},
@@ -324,19 +356,49 @@ export default function App() {
           </div>
         </section>
 
+        <section id="docs" className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-semibold">Documentation, License &amp; Privacy</h2>
+            <div className="flex flex-wrap gap-2">
+              {['README.md', 'PRIVACY.md', 'SECURITY.md', 'LICENSE', 'CONTRIBUTING.md', 'build-android.yml'].map((docKey) => (
+                <button
+                  key={docKey}
+                  type="button"
+                  onClick={() => setActiveDoc(docKey)}
+                  className={`rounded-lg border px-3 py-1.5 font-mono text-xs transition-colors ${
+                    activeDoc === docKey
+                      ? 'border-[#E5A00D] bg-[#E5A00D]/15 text-[#E5A00D] font-semibold'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-[#242D3A] dark:bg-[#131820] dark:text-slate-300'
+                  }`}
+                >
+                  {docKey}
+                </button>
+              ))}
+            </div>
+          </div>
+          <pre className="max-h-[420px] overflow-auto rounded-xl border border-slate-200 bg-white p-5 font-mono text-xs leading-relaxed text-slate-800 dark:border-[#242D3A] dark:bg-[#131820] dark:text-slate-200">
+            {docContent}
+          </pre>
+        </section>
+
         <section id="instructions" className="space-y-4">
-          <h2 className="text-lg font-semibold">Installation &amp; Local Build Instructions</h2>
+          <h2 className="text-lg font-semibold">GitHub Actions CI &amp; Local Build Instructions</h2>
           <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 dark:border-[#242D3A] dark:bg-[#131820]">
             <div className="space-y-1.5">
-              <h3 className="text-sm font-semibold">Install Prebuilt Signed APK via ADB</h3>
-              <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs dark:border-[#242D3A] dark:bg-[#0D1117]">adb install -r app-release.apk</pre>
+              <h3 className="text-sm font-semibold">Build Signed APKs &amp; AAB Automatically via GitHub Actions</h3>
+              <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs dark:border-[#242D3A] dark:bg-[#0D1117]">
+{`git add .
+git commit -m "Build Kestrel Terminal Android APK"
+git push origin main
+# Open GitHub -> Actions -> "Build Kestrel Android APK & AAB" -> Download kestrel-android-artifacts`}
+              </pre>
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-sm font-semibold">Rebuild from Source (Android SDK 35 + NDK 27 + JDK 17)</h3>
+              <h3 className="text-sm font-semibold">Local Build &amp; ADB Installation (Android SDK 35 + NDK 27 + JDK 17)</h3>
               <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-3 font-mono text-xs dark:border-[#242D3A] dark:bg-[#0D1117]">
-{`unzip kestrel-android-source.zip -d kestrel-android
-cd kestrel-android
-./gradlew testDebugUnitTest assembleDebug assembleRelease bundleRelease`}
+{`cd android
+gradle testDebugUnitTest assembleDebug assembleRelease bundleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk`}
               </pre>
             </div>
           </div>
