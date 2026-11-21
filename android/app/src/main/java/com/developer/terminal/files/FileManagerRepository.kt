@@ -126,7 +126,10 @@ class FileManagerRepository(private val context: Context) {
 
     suspend fun exportFileToSafUri(sourceFile: File, destUri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            context.contentResolver.openOutputStream(destUri)?.use { output -> FileInputStream(sourceFile).use { it.copyTo(output) } } ?: error("Failed to open destination URI")
+            context.contentResolver.openOutputStream(destUri)?.use { output ->
+                FileInputStream(sourceFile).use { input -> input.copyTo(output) }
+            } ?: error("Failed to open destination URI")
+            Unit
         }
     }
 }
