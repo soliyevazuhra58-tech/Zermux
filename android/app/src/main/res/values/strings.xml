@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Kestrel</string>
+    <string name="app_subtitle">Android Terminal &amp; Dev Workspace</string>
+    <string name="widget_terminal_launch">Terminal Quick Launch</string>
+    <string name="widget_cpu_ram">CPU &amp; RAM Monitor</string>
+    <string name="widget_battery">Battery Monitor</string>
+    <string name="widget_storage">Storage Monitor</string>
+    <string name="widget_running_tasks">Running Tasks</string>
+    <string name="widget_quick_commands">Quick Commands</string>
+    <string name="widget_network_status">Network Status</string>
+    <string name="shortcut_new_terminal_short">New Terminal</string>
+    <string name="shortcut_new_terminal_long">Open a new shell session</string>
+    <string name="shortcut_editor_short">Code Editor</string>
+    <string name="shortcut_editor_long">Open workspace code editor</string>
+</resources>

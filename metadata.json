@@ -1,0 +1,6 @@
+{
+  "name": "Kestrel Terminal",
+  "description": "Native Android Terminal, ARM64 Workspace, Code Editor, Package Manager, and Developer Environment (APK & Source Portal)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

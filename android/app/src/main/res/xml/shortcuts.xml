@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="new_terminal" android:enabled="true" android:icon="@drawable/ic_notification" android:shortcutShortLabel="@string/shortcut_new_terminal_short" android:shortcutLongLabel="@string/shortcut_new_terminal_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.developer.terminal" android:targetClass="com.developer.terminal.MainActivity">
+            <extra android:name="route" android:value="terminal" />
+        </intent>
+    </shortcut>
+    <shortcut android:shortcutId="open_editor" android:enabled="true" android:icon="@drawable/ic_notification" android:shortcutShortLabel="@string/shortcut_editor_short" android:shortcutLongLabel="@string/shortcut_editor_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.developer.terminal" android:targetClass="com.developer.terminal.MainActivity">
+            <extra android:name="route" android:value="editor" />
+        </intent>
+    </shortcut>
+</shortcuts>

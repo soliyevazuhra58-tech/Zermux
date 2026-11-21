@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.Kestrel" parent="android:Theme.Material.NoActionBar" />
+    <style name="Theme.Kestrel.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0D1117</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_kestrel</item>
+        <item name="windowSplashScreenAnimationDuration">650</item>
+        <item name="postSplashScreenTheme">@style/Theme.Kestrel</item>
+    </style>
+</resources>
