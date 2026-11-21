@@ -7,3 +7,5 @@ android/app/build
 android/app/.cxx
 android/local.properties
 android/keystore/*.jks
+android/keystore/*.keystore
+android/keystore/keystore.properties
