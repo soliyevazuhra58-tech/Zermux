@@ -4,22 +4,22 @@
 
 ## Build and CI
 
-GitHub Actions builds the debug APK, release APK, and Android App Bundle (AAB) on pushes and pull requests to `main` / `master`.
+GitHub Actions builds **APK files only** (debug and release) on pushes and pull requests to `main` / `master`. Android App Bundle (AAB) generation is intentionally disabled.
 
-The workflow uses the Android SDK already installed on GitHub-hosted Ubuntu runners, installs the pinned SDK/NDK/CMake components, runs unit tests, builds the Android artifacts, verifies APK metadata, and uploads the results as `kestrel-android-artifacts`.
+The workflow uses the Android SDK installed on GitHub-hosted Ubuntu runners, installs the pinned SDK/NDK/CMake components, runs unit tests, builds the APKs, verifies APK metadata, and uploads them as the `kestrel-android-apks` artifact.
 
 ### Release signing (recommended for distributable updates)
 
-The workflow intentionally does not generate a new release key on every run and does not contain a hard-coded keystore password.
+The workflow does not generate a new release key on every run and does not contain a hard-coded keystore password.
 
-To enable signed release APK/AAB builds, add these repository Actions secrets:
+To enable signed release APK builds, add these repository Actions secrets:
 
 - `ANDROID_KEYSTORE_BASE64`: Base64-encoded contents of your private `.jks` or `.keystore` file.
 - `ANDROID_KEYSTORE_PASSWORD`: keystore password.
 - `ANDROID_KEY_ALIAS`: key alias.
 - `ANDROID_KEY_PASSWORD`: private-key password.
 
-Keep the keystore and passwords private. Never commit them to the repository. If the secrets are not configured, CI still builds the debug APK and unsigned release APK/AAB; the unsigned release cannot be installed as a normal signed app or used for Play Store updates until signed with your private release key.
+Keep the keystore and passwords private. Never commit them to the repository. If the secrets are not configured, CI still builds the debug APK and unsigned release APK. The unsigned release cannot be installed as a normal signed app or used for updates until signed with your private release key.
 
 ### Create a release key locally
 
@@ -44,5 +44,4 @@ The properties file and keystore are ignored by Git. Do not paste their contents
 
 ### Download build outputs
 
-Open the repository's **Actions** tab, select the latest successful **Build Kestrel Android APK & AAB** run, and download the `kestrel-android-artifacts` artifact.
-
+Open the repository's **Actions** tab, select the latest successful **Build Kestrel Android APK** run, and download the `kestrel-android-apks` artifact.
