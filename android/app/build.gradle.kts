@@ -15,6 +15,21 @@ val keystoreProps = Properties().apply {
     }
 }
 
+val releaseStorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+    ?.takeIf { it.isNotBlank() }
+    ?: keystoreProps.getProperty("storeFile")
+val releaseStoreFile = releaseStorePath?.let { rootProject.file(it) }
+val releaseStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    ?: keystoreProps.getProperty("storePassword")
+val releaseKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+    ?: keystoreProps.getProperty("keyAlias")
+val releaseKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+    ?: keystoreProps.getProperty("keyPassword")
+val releaseSigningReady = releaseStoreFile?.isFile == true &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.developer.terminal"
     compileSdk = 35
@@ -41,15 +56,16 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val storePath = keystoreProps.getProperty("storeFile", "keystore/kestrel-release.jks")
-            storeFile = rootProject.file(storePath)
-            storePassword = keystoreProps.getProperty("storePassword", "kestrel2026release")
-            keyAlias = keystoreProps.getProperty("keyAlias", "kestrel")
-            keyPassword = keystoreProps.getProperty("keyPassword", "kestrel2026release")
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
+        if (releaseSigningReady) {
+            create("release") {
+                storeFile = requireNotNull(releaseStoreFile)
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
         }
     }
 
@@ -61,7 +77,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
